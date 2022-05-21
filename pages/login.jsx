@@ -1,11 +1,10 @@
-import React from "react";
-import { Paper, createStyles, TextInput, PasswordInput, Button, Title, Text, Anchor, Container } from "@mantine/core";
-import Link from "next/link";
+import { Paper, createStyles, TextInput, PasswordInput, Button, Title, Container } from "@mantine/core";
+import { useForm } from "@mantine/form";
 import { useRouter } from "next/router";
-import { app } from "../firebaseConfig";
+import { useEffect } from "react";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, getIdToken } from "firebase/auth";
 import { useState } from "react";
-import { getAuth, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, signInWithPopup } from "firebase/auth";
-
+import { app } from "../firebaseConfig";
 // Styles =================================================================================================================
 const useStyles = createStyles((theme) => ({
   wrapper: {
@@ -18,15 +17,15 @@ const useStyles = createStyles((theme) => ({
     marginLeft: "auto",
     marginRight: 0,
     minHeight: 1280,
-    width: 450,
+    width: 480,
     paddingLeft: 30,
-    paddingRight: 10,
+    paddingRight: 30,
 
     [`@media (max-width: ${theme.breakpoints.sm}px)`]: {
       maxWidth: "100%",
     },
 
-    [`@media (min-width: ${theme.breakpoints.lg}px)`]: {
+    [`@media (min-width: ${theme.breakpoints.md}px)`]: {
       paddingTop: 300,
     },
   },
@@ -47,56 +46,73 @@ const useStyles = createStyles((theme) => ({
 
 // Styles =========================================================================
 
-export default function Register() {
-  const { classes } = useStyles();
-
+export default function Login() {
   const auth = getAuth();
   const googleProvider = new GoogleAuthProvider();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { classes } = useStyles();
 
   const signUp = () => {
-    createUserWithEmailAndPassword(auth, email, password).then((response) => {
-      console.log(response.user);
-      alert(`user with email ${response.user.email} is signed up successfully`);
-      sessionStorage.setItem("Token", response.user.accessToken);
-      router.push("/login");
-    });
+    signInWithEmailAndPassword(auth, email, password)
+      .then((response) => {
+        console.log(response.user);
+        sessionStorage.setItem("Token", response.user.accessToken);
+        if (email == "admin@admin.com" && password == "123456") {
+          router.push("/admin");
+        } else {
+          router.push("/home");
+        }
+      })
+      .catch((err) => {
+        alert("Cannot Log in");
+      });
   };
 
   const signUpWithGoogle = () => {
     signInWithPopup(auth, googleProvider).then((response) => {
-      console.log(response.user);
       sessionStorage.setItem("Token", response.user.accessToken);
-      alert(`user with email ${response.user.email} is signed up successfully`);
-      router.push("/login");
+      console.log(response.user);
+      router.push("/home");
     });
   };
+
+  useEffect(() => {
+    let token = sessionStorage.getItem("Token");
+
+    if (token) {
+      router.push("/home");
+    }
+  }, []);
+
+  const form = useForm({
+    initialValues: {
+      email: "",
+      password: "",
+    },
+
+    validate: {
+      email: (value) => (/^\S+@\S+$/.test(value) ? null : "Invalid email"),
+    },
+  });
 
   return (
     <Container size={2000}>
       <div className={classes.wrapper}>
         <Paper className={classes.form} radius={0}>
           <Title order={2} className={classes.title} mt="md" mb={50}>
-            Create New Account
+            Login BCR
           </Title>
 
           <TextInput value={email} onChange={(event) => setEmail(event.currentTarget.value)} required id="email" label="Email" placeholder="hello@gmail.com" size="md" />
-          <PasswordInput value={password} onChange={(event) => setPassword(event.currentTarget.value)} required id="password" label="Password" placeholder="Password" mt="md" size="md" />
+          <PasswordInput value={password} onChange={(event) => setPassword(event.currentTarget.value)} required id="password" label="Password" placeholder="Your password" mt="md" size="md" />
           <Button onClick={signUp} fullWidth type="submit" mt="xl" size="md">
-            Sign Up
+            Sign in
           </Button>
           <Button onClick={signUpWithGoogle} fullWidth type="submit" mt="xl" size="md">
-            Sign Up with google
+            Sign in with google
           </Button>
-
-          <Text align="center" mt="md">
-            Already have an account?{" "}
-            <Link href="/login">
-              <Anchor weight={700}>Login</Anchor>
-            </Link>
-          </Text>
         </Paper>
       </div>
     </Container>
